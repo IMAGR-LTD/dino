@@ -1,4 +1,16 @@
-# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
+# Copyright (c) Facebook, Inc. and its affiliates.
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# 
+#     http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 Mostly copy-paste from timm library.
 https://github.com/rwightman/pytorch-image-models/blob/master/timm/models/vision_transformer.py
@@ -232,15 +244,17 @@ class VisionTransformer(nn.Module):
             scale_factor=(w0 / math.sqrt(N), h0 / math.sqrt(N)),
             mode='bicubic',
         )
+        # sometimes there is a floating point error in the interpolation and so
+        # we need to pad the patch positional encoding.
         if w0 != patch_pos_embed.shape[-2]:
             helper = torch.zeros(h0)[None, None, None, :].repeat(1, dim, w0 - patch_pos_embed.shape[-2], 1).to(x.device)
             patch_pos_embed = torch.cat((patch_pos_embed, helper), dim=-2)
         if h0 != patch_pos_embed.shape[-1]:
             helper = torch.zeros(w0)[None, None, :, None].repeat(1, dim, 1, h0 - patch_pos_embed.shape[-1]).to(x.device)
-            pos_embed = torch.cat((patch_pos_embed, helper), dim=-1)
+            patch_pos_embed = torch.cat((patch_pos_embed, helper), dim=-1)
+
         patch_pos_embed = patch_pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
         pos_embed = torch.cat((class_pos_embed.unsqueeze(0), patch_pos_embed), dim=1)
-
         cls_tokens = self.cls_token.expand(B, -1, -1)
         x = torch.cat((cls_tokens, x), dim=1)
         x = x + pos_embed
